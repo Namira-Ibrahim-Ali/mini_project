@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =========================================================================
+    // HELPER FUNCTIONS FOR ROLE-BASED ACCESS CONTROL (RBAC)
+    // =========================================================================
+    
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Retrieve the user profile document from the users collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if the requesting user has the Admin role
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    // Check if the requesting user has the Faculty role
+    function isFaculty() {
+      return isAuthenticated() && getUserData().role == 'faculty';
+    }
+
+    // Check if the faculty user belongs to the specified society
+    function isFacultyOfSociety(society) {
+      return isFaculty() && getUserData().society == society;
+    }
+
+    // =========================================================================
+    // 1. PUBLIC & VERIFIED EVENTS COLLECTION (/events)
+    // =========================================================================
+    // Read: Public access (students, prospective attendees, advisors)
+    // Write: IEEE SB Admin OR Faculty Advisor assigned to that specific society
+    match /events/{eventId} {
+      allow read: if true;
+      
+      allow create: if isAuthenticated() && (
+        isAdmin() || 
+        (isFaculty() && request.resource.data.society == getUserData().society)
+      );
+      
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (isFaculty() && 
+         resource.data.society == getUserData().society && 
+         request.resource.data.society == getUserData().society)
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 2. CALENDAR ALLOCATION REQUESTS (/calendarRequests)
+    // =========================================================================
+    // Read: Admin OR the owning Faculty Advisor who submitted the request
+    // Create: Faculty Advisors for their assigned society
+    // Update/Delete: Admin only (for approving or rejecting dates)
+    match /calendarRequests/{requestId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        (isFaculty() && resource.data.facultyUid == request.auth.uid)
+      );
+      
+      allow create: if isAuthenticated() && isFaculty() && 
+        request.resource.data.facultyUid == request.auth.uid &&
+        request.resource.data.society == getUserData().society &&
+        request.resource.data.status == 'pending';
+        
+      allow update, delete: if isAuthenticated() && isAdmin();
+    }
+
+    // =========================================================================
+    // 3. USER PROFILES COLLECTION (/users)
+    // =========================================================================
+    // Zero-Knowledge Architecture:
+    // Passwords are cryptographically managed and hashed by Firebase Auth.
+    // Firestore stores ONLY public/metadata profile details (uid, email, role, society, createdAt).
+    // Read: Authenticated users can read directory profiles
+    // Write: System Admin only (or self-registration of initial profile)
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      
+      // Admins can manage any account; users can initialize their own profile on signup
+      allow create: if isAuthenticated() && (
+        isAdmin() || request.auth.uid == userId
+      );
+      
+      allow update, delete: if isAuthenticated() && isAdmin();
+    }
+
+  }
+}

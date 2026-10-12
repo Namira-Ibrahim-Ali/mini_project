@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEEE NSAKCET Management System - RBAC & Firebase Portal</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ieee: {
+                            blue: '#006699',
+                            darkblue: '#003366',
+                            light: '#e6f2f8'
+                        },
+                        nsakcet: {
+                            red: '#C8102E',
+                            darkred: '#8B0000',
+                            lightred: '#fdf2f4'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #006699;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #003366;
+        }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+        }
+        .chat-slide-up {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-slide-down {
+            animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes toastIn {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- TOP SYSTEM STATUS & SECURITY BANNER -->
+    <div id="security-banner" class="bg-gradient-to-r from-gray-900 via-ieee-darkblue to-nsakcet-darkred text-white text-[11px] py-1.5 px-4 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/20 text-green-300 border border-green-400/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5 animate-pulse"></span>
+                    RBAC Security Enforced
+                </span>
+                <span class="text-gray-300 hidden sm:inline">|</span>
+                <span class="text-gray-200">
+                    <i class="fa-solid fa-shield-halved text-xs text-yellow-300 mr-1"></i>
+                    Zero-Knowledge Password Architecture (Firebase Auth Protected)
+                </span>
+            </div>
+            <div class="flex items-center space-x-3 text-xs">
+                <span id="backend-mode-tag" class="text-gray-300">
+                    <i class="fa-solid fa-database mr-1 text-blue-300"></i>
+                    Firestore Reactive Engine: <strong class="text-white">Active</strong>
+                </span>
+                <button onclick="openConfigModal()" class="text-yellow-300 hover:text-white underline text-[11px] transition-all">
+                    Firebase Config
+                </button>
+                <button onclick="resetDemoDatabase()" class="text-gray-400 hover:text-white text-[11px] transition-all" title="Reset all collections to initial state">
+                    <i class="fa-solid fa-arrows-rotate mr-0.5"></i> Reset DB
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GLOBAL BRANDING & ROLE-BASED PORTAL HEADER -->
+    <header class="sticky top-0 z-40 glass-header border-b border-gray-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                
+                <!-- Left: Branding -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchPortal('student')">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-ieee-darkblue to-nsakcet-red flex items-center justify-center text-white font-extrabold text-xl shadow-md border border-white/20">
+                        IEEE
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-lg text-ieee-darkblue tracking-tight">IEEE NSAKCET</span>
+                            <span class="bg-nsakcet-lightred text-nsakcet-red text-xs font-semibold px-2 py-0.5 rounded border border-nsakcet-red/20">STB95031</span>
+                        </div>
+                        <p class="text-xs text-gray-500 font-medium">Nawab Shah Alam Khan College of Engineering & Tech</p>
+                    </div>
+                </div>
+
+                <!-- Center: Dynamic RBAC Portal Switcher -->
+                <!-- Nav items are dynamically shown/hidden based on verified user role -->
+                <div id="portal-navigation-container" class="bg-gray-100 p-1.5 rounded-xl border border-gray-200 flex space-x-1">
+                    <!-- Student Portal: Visible to Student, Faculty, Admin -->
+                    <button onclick="switchPortal('student')" id="nav-btn-student" class="portal-nav-btn px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center space-x-2 bg-white text-ieee-darkblue shadow-sm">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                        <span>Student Portal</span>
+                    </button>
+                    <!-- Faculty Portal: Visible ONLY to Faculty Advisor -->
+                    <button onclick="switchPortal('faculty')" id="nav-btn-faculty" class="portal-nav-btn px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-600 hover:text-ieee-darkblue rounded-lg transition-all flex items-center space-x-2 hidden">
+                        <i class="fa-solid fa-chalkboard-user"></i>
+                        <span>Faculty Portal</span>
+                    </button>
+                    <!-- Admin Portal: Visible ONLY to System Admin -->
+                    <button onclick="switchPortal('admin')" id="nav-btn-admin" class="portal-nav-btn px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-600 hover:text-ieee-darkblue rounded-lg transition-all flex items-center space-x-2 hidden">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span>Admin Portal</span>
+                        <span id="admin-pending-badge" class="bg-nsakcet-red text-white text-[10px] px-1.5 py-0.2 rounded-full hidden">0</span>
+                    </button>
+                </div>
+
+                <!-- Right: Authentication & Profile State -->
+                <div class="flex items-center space-x-3">
+                    
+                    <!-- Unauthenticated View: Sign In Button -->
+                    <div id="auth-unauthenticated" class="flex items-center space-x-2">
+                        <button onclick="openLoginModal()" class="bg-ieee-darkblue hover:bg-ieee-blue text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center space-x-2">
+                            <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+                            <span>Sign In</span>
+                        </button>
+                    </div>
+
+                    <!-- Authenticated View: User Profile & Logout -->
+                    <div id="auth-authenticated" class="hidden items-center space-x-3">
+                        <div class="text-right hidden sm:block">
+                            <p id="user-display-name" class="text-xs font-bold text-ieee-darkblue leading-tight truncate max-w-[160px]">User Name</p>
+                            <p id="user-role-badge" class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Role</p>
+                        </div>
+                        <div id="user-avatar-circle" class="w-9 h-9 rounded-full bg-ieee-light text-ieee-darkblue flex items-center justify-center font-bold text-sm border border-ieee-blue/20 shadow-sm">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <button onclick="handleSignOut()" title="Sign Out" class="text-gray-400 hover:text-nsakcet-red p-2 rounded-lg hover:bg-gray-100 transition-all text-sm">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- LIVE TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed top-24 right-6 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ========================================================================= -->
+        <!-- 1. PUBLIC / STUDENT PORTAL -->
+        <!-- ========================================================================= -->
+        <section id="portal-student" class="portal-section space-y-8">
+            
+            <!-- Hero Spotlight Section -->
+            <div class="relative bg-gradient-to-r from-ieee-darkblue via-ieee-blue to-nsakcet-darkred rounded-2xl overflow-hidden shadow-xl text-white p-6 sm:p-10">
+                <div class="absolute inset-0 bg-black/20"></div>
+                <div class="relative z-10 max-w-3xl space-y-4">
+                    <div class="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider text-white">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-ping"></span>
+                        <span>Flagship Event Coming Soon</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight">IEEE NSAKCET National Hackathon 2026</h1>
+                    <p class="text-gray-100 text-sm sm:text-base leading-relaxed">
+                        Join 300+ developers, innovators, and engineering minds for a 24-hour continuous coding hackathon focusing on AI for Social Good and Sustainable Smart Tech.
+                    </p>
+                    <div class="pt-2 flex flex-wrap gap-4 items-center">
+                        <button onclick="openRegisterModal('National Hackathon 2026')" class="bg-nsakcet-red hover:bg-nsakcet-darkred text-white px-6 py-2.5 rounded-xl font-bold shadow-lg transition-all flex items-center space-x-2 text-sm">
+                            <span>Register Now</span>
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </button>
+                        <div class="text-xs text-gray-200 flex items-center space-x-4 bg-black/30 px-4 py-2 rounded-xl backdrop-blur-sm">
+                            <span><i class="fa-regular fa-calendar mr-1"></i> Nov 12-13, 2026</span>
+                            <span><i class="fa-solid fa-location-dot mr-1"></i> Main Auditorium</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-lg bg-ieee-light text-ieee-blue flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <p id="stat-events-count" class="text-2xl font-bold text-gray-800">48+</p>
+                        <p class="text-xs text-gray-500 font-medium">Events Conducted</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-lg bg-nsakcet-lightred text-nsakcet-red flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800">650+</p>
+                        <p class="text-xs text-gray-500 font-medium">Active Members</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-sitemap"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800">5</p>
+                        <p class="text-xs text-gray-500 font-medium">Active Chapters</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-award"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-800">12</p>
+                        <p class="text-xs text-gray-500 font-medium">Regional Awards</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events Hub Section (Real-Time Firestore Synchronized) -->
+            <div class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-ieee-darkblue">IEEE NSAKCET Events Hub</h2>
+                        <p class="text-xs text-gray-500">Live events retrieved real-time from Cloud Firestore <code class="bg-gray-100 px-1 py-0.5 rounded text-[11px] text-ieee-blue">/events</code></p>
+                    </div>
+                    <!-- Tabs -->
+                    <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200 self-start sm:self-auto">
+                        <button onclick="switchEventTab('upcoming')" id="tab-btn-upcoming" class="px-4 py-1.5 text-xs font-semibold rounded-md bg-white text-ieee-darkblue shadow-sm transition-all">
+                            Upcoming Events (<span id="tab-upcoming-count">0</span>)
+                        </button>
+                        <button onclick="switchEventTab('past')" id="tab-btn-past" class="px-4 py-1.5 text-xs font-medium text-gray-600 hover:text-ieee-darkblue transition-all">
+                            Past Events Gallery (<span id="tab-past-count">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upcoming Events Container (Dynamically Populated) -->
+                <div id="events-upcoming-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Cards populated via Firestore listener -->
+                </div>
+
+                <!-- Past Events Container (Gallery) -->
+                <div id="events-past-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+                    <!-- Cards populated via Firestore listener -->
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ========================================================================= -->
+        <!-- 2. FACULTY ADVISOR PORTAL -->
+        <!-- ========================================================================= -->
+        <section id="portal-faculty" class="portal-section space-y-8 hidden">
+            
+            <!-- Faculty Header Banner -->
+            <div class="bg-gradient-to-r from-gray-900 to-ieee-darkblue text-white rounded-2xl p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-nsakcet-red text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded">Faculty Advisor Workspace</span>
+                        <span id="faculty-assigned-society-badge" class="bg-white/20 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded border border-white/20">Computer Society</span>
+                    </div>
+                    <h2 id="faculty-welcome-title" class="text-xl font-bold mt-2">Welcome, Faculty Advisor</h2>
+                    <p class="text-xs text-gray-300">RBAC Enforcement: You are authorized to submit calendar slot requests and publish events <strong>exclusively for your assigned chapter</strong>.</p>
+                </div>
+                <button onclick="scrollToCalendarRequest()" class="bg-nsakcet-red hover:bg-nsakcet-darkred text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow transition-all self-start md:self-auto flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Request New Event Slot</span>
+                </button>
+            </div>
+
+            <!-- Faculty Metrics -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 font-medium">Chapter Events Approved</p>
+                        <p id="faculty-approved-count" class="text-2xl font-extrabold text-gray-800 mt-1">0</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 font-medium">Your Pending Requests</p>
+                        <p id="faculty-pending-count" class="text-2xl font-extrabold text-amber-600 mt-1">0</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 font-medium">Chapter Student Reach</p>
+                        <p id="faculty-reach-count" class="text-2xl font-extrabold text-ieee-blue mt-1">650+</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-ieee-light text-ieee-blue flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Interactive Calendar & Slot Request Engine -->
+                <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4" id="faculty-calendar-section">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-base">IEEE Chapter Event Request Calendar</h3>
+                            <p class="text-xs text-gray-500">Select any available date cell to submit an official allocation request to the Admin queue</p>
+                        </div>
+                        <div class="text-xs font-bold text-ieee-darkblue bg-ieee-light px-3 py-1 rounded-lg">
+                            October 2026
+                        </div>
+                    </div>
+
+                    <!-- Calendar Grid Header -->
+                    <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-gray-400 py-2 border-b border-gray-100">
+                        <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
+                    </div>
+
+                    <!-- Calendar Days Grid -->
+                    <div class="grid grid-cols-7 gap-2 text-xs" id="calendar-grid-faculty">
+                        <!-- Calendar Days dynamically populated via JS -->
+                    </div>
+
+                    <div class="flex items-center justify-around pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-green-500 mr-1.5"></span> Approved Event</span>
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5"></span> Pending Approval</span>
+                        <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-gray-200 border border-gray-300 mr-1.5"></span> Click to Request Slot</span>
+                    </div>
+                </div>
+
+                <!-- Verified Event Publisher / Past Event Upload Form -->
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-gray-800 text-base">Event Publisher</h3>
+                            <span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">Firestore Direct</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Publish verified chapter events or upload completed recap reports directly into <code class="text-ieee-blue">/events</code></p>
+                    </div>
+
+                    <form onsubmit="handleFacultyEventPublish(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Event Title</label>
+                            <input type="text" id="pub-event-title" required placeholder="e.g. Next-Gen Cloud Computing Summit" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Target Society (RBAC Scoped)</label>
+                            <input type="text" id="pub-event-society" readonly class="w-full text-xs p-2.5 bg-gray-100 rounded-xl border border-gray-300 font-bold text-ieee-darkblue cursor-not-allowed">
+                            <p class="text-[10px] text-gray-400 mt-0.5">🔒 Enforced to your assigned chapter by Firestore security rules.</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Status</label>
+                                <select id="pub-event-status" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                                    <option value="upcoming">Upcoming Event</option>
+                                    <option value="past">Past Recap / Album</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Event Date</label>
+                                <input type="text" id="pub-event-date" placeholder="e.g. Nov 18, 2026" required class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Venue Location</label>
+                            <input type="text" id="pub-event-venue" placeholder="e.g. CS Seminar Hall A" required class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Description / Report Summary</label>
+                            <textarea id="pub-event-desc" rows="3" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none" placeholder="Provide detailed agenda, speaker profiles, or outcomes..." required></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Banner Image URL (Unsplash / Hosted)</label>
+                            <input type="url" id="pub-event-banner" placeholder="https://images.unsplash.com/..." class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                        </div>
+
+                        <button type="submit" class="w-full py-2.5 bg-nsakcet-red hover:bg-nsakcet-darkred text-white font-bold text-xs rounded-xl shadow transition-all flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>Publish to Student Portal</span>
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ========================================================================= -->
+        <!-- 3. ADMIN PORTAL (APPROVAL QUEUE & ZERO-KNOWLEDGE ACCOUNT DIRECTORY) -->
+        <!-- ========================================================================= -->
+        <section id="portal-admin" class="portal-section space-y-8 hidden">
+            
+            <!-- Admin Top Banner -->
+            <div class="bg-gradient-to-r from-nsakcet-darkred via-nsakcet-red to-ieee-darkblue text-white rounded-2xl p-6 shadow-md flex items-center justify-between">
+                <div>
+                    <span class="bg-white/20 text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded backdrop-blur-md">IEEE SB Operations & Exam Ops</span>
+                    <h2 class="text-xl font-bold mt-2">IEEE NSAKCET System Admin Control</h2>
+                    <p class="text-xs text-gray-200">Review faculty calendar date requests in real-time, avoid scheduling collisions, and manage chapter metadata.</p>
+                </div>
+                <div class="hidden sm:block text-right">
+                    <p class="text-xs text-gray-200">System Head</p>
+                    <p id="admin-user-title" class="text-sm font-bold">Dr. SB Head (Chair)</p>
+                </div>
+            </div>
+
+            <!-- Approval Queue Section (Real-Time Firestore Synchronized) -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-base">Pending Faculty Event Requests</h3>
+                        <p class="text-xs text-gray-500">Live requests submitted by chapter advisors in <code class="text-ieee-blue">/calendarRequests</code> awaiting Admin authorization</p>
+                    </div>
+                    <span id="admin-pending-count-tag" class="text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-full">0 Pending Review</span>
+                </div>
+
+                <!-- Table of Requests -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-200 text-gray-400 font-bold bg-gray-50/50">
+                                <th class="py-3 px-4">Event Title</th>
+                                <th class="py-3 px-4">Society / Chapter</th>
+                                <th class="py-3 px-4">Requested Date</th>
+                                <th class="py-3 px-4">Venue Request</th>
+                                <th class="py-3 px-4">Advisor Name</th>
+                                <th class="py-3 px-4">Expected Attendees</th>
+                                <th class="py-3 px-4 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-approval-table-body" class="divide-y divide-gray-100">
+                            <!-- Rows populated dynamically via Firestore listener -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ZERO-KNOWLEDGE SOCIETY ACCOUNTS MANAGEMENT SECTION -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h3 class="font-bold text-gray-800 text-base">Society Accounts & Metadata Directory</h3>
+                            <span class="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded border border-green-200">Zero-Knowledge Enforced</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Admins can review account counts and chapter metadata. <strong>Passwords are cryptographically isolated in Firebase Auth and never stored in Firestore.</strong></p>
+                    </div>
+                    <button onclick="openCreateAccountModal()" class="bg-ieee-darkblue hover:bg-ieee-blue text-white text-xs font-bold px-3 py-2 rounded-xl shadow transition-all flex items-center space-x-1.5 self-start sm:self-auto">
+                        <i class="fa-solid fa-user-plus text-xs"></i>
+                        <span>Provision Chapter Account</span>
+                    </button>
+                </div>
+
+                <!-- Account Stats -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                    <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                        <p class="text-xs text-gray-500">Total Accounts</p>
+                        <p id="accounts-stat-total" class="text-xl font-extrabold text-gray-800">5</p>
+                    </div>
+                    <div class="p-3 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                        <p class="text-xs text-blue-600">Faculty Advisors</p>
+                        <p id="accounts-stat-faculty" class="text-xl font-extrabold text-blue-700">3</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 rounded-xl border border-purple-100 text-center">
+                        <p class="text-xs text-purple-600">Active Chapters</p>
+                        <p id="accounts-stat-societies" class="text-xl font-extrabold text-purple-700">3</p>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                        <p class="text-xs text-emerald-600">Password Security</p>
+                        <p class="text-xs font-bold text-emerald-700 mt-1">Argon2/Scrypt</p>
+                    </div>
+                </div>
+
+                <!-- Users Metadata Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-200 text-gray-400 font-bold bg-gray-50/50">
+                                <th class="py-3 px-4">UID</th>
+                                <th class="py-3 px-4">Advisor / User Name</th>
+                                <th class="py-3 px-4">Official Email</th>
+                                <th class="py-3 px-4">Assigned Chapter</th>
+                                <th class="py-3 px-4">Role</th>
+                                <th class="py-3 px-4">Account Created</th>
+                                <th class="py-3 px-4">Credential Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-table-body" class="divide-y divide-gray-100">
+                            <!-- Populated dynamically via Firestore /users listener -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Master Calendar & Societies Overview Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Master Approved Calendar Matrix -->
+                <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-base">Approved Master Calendar Schedule</h3>
+                            <p class="text-xs text-gray-500">Officially sanctioned dates published to student portal</p>
+                        </div>
+                        <span class="text-xs text-gray-500 font-semibold bg-gray-100 px-2 py-1 rounded">2026 Academic Cycle</span>
+                    </div>
+
+                    <div class="space-y-3" id="admin-approved-list">
+                        <!-- Approved items list dynamically updated -->
+                    </div>
+                </div>
+
+                <!-- Active Chapters Overview -->
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+                    <h3 class="font-bold text-gray-800 text-base">IEEE NSAKCET Chapters</h3>
+                    <div class="space-y-3" id="admin-societies-list">
+                        <div class="p-3 border border-gray-100 rounded-xl bg-gray-50 flex items-center justify-between">
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-xs">Computer Society (CS)</h4>
+                                <p class="text-[11px] text-gray-500">Advisor: Dr. Mohammed Asif</p>
+                            </div>
+                            <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">Active</span>
+                        </div>
+                        <div class="p-3 border border-gray-100 rounded-xl bg-gray-50 flex items-center justify-between">
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-xs">Robotics & Automation (RAS)</h4>
+                                <p class="text-[11px] text-gray-500">Advisor: Prof. K. Ahmed</p>
+                            </div>
+                            <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">Active</span>
+                        </div>
+                        <div class="p-3 border border-gray-100 rounded-xl bg-gray-50 flex items-center justify-between">
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-xs">Women in Engineering (WIE)</h4>
+                                <p class="text-[11px] text-gray-500">Advisor: Dr. Fatima Z.</p>
+                            </div>
+                            <span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">Active</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-ieee-darkblue text-white border-t border-ieee-blue/30 mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-300">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded bg-nsakcet-red flex items-center justify-center font-bold text-white text-sm">
+                    IEEE
+                </div>
+                <div>
+                    <p class="font-bold text-white">IEEE NSAKCET Student Branch</p>
+                    <p>Nawab Shah Alam Khan College of Engineering & Technology, Hyderabad</p>
+                </div>
+            </div>
+            <div class="flex space-x-6">
+                <a href="#" class="hover:text-white transition-all">Official Portal</a>
+                <a href="#" class="hover:text-white transition-all">IEEE.org</a>
+                <a href="#" class="hover:text-white transition-all">IEEE India Council</a>
+            </div>
+            <p>&copy; 2026 IEEE NSAKCET SB. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- ========================================================================= -->
+    <!-- AI CHATBOT FLOATING WIDGET ("IEEE NSAKCET AI ASSISTANT") -->
+    <!-- ========================================================================= -->
+    <div id="ai-chatbot-container" class="fixed bottom-6 right-6 z-50">
+        <!-- Floating Trigger Button -->
+        <button onclick="toggleChatbot()" id="chat-trigger-btn" class="w-14 h-14 rounded-full bg-gradient-to-r from-ieee-darkblue to-nsakcet-red text-white shadow-2xl flex items-center justify-center text-2xl hover:scale-105 transition-all">
+            <i class="fa-solid fa-robot"></i>
+        </button>
+
+        <!-- Chatbot Dialog Box -->
+        <div id="chat-window" class="hidden absolute bottom-16 right-0 w-[90vw] sm:w-[380px] h-[500px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden chat-slide-up">
+            <!-- Chat Header -->
+            <div class="bg-gradient-to-r from-ieee-darkblue to-nsakcet-red text-white p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-sm">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm leading-none">IEEE NSAKCET Assistant</h4>
+                        <span class="text-[10px] text-green-300 font-medium">● Firestore Live Context</span>
+                    </div>
+                </div>
+                <button onclick="toggleChatbot()" class="text-white/80 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Context Indicator -->
+            <div class="bg-ieee-light px-3 py-1.5 border-b border-ieee-blue/10 flex items-center justify-between text-[11px] text-ieee-darkblue font-medium">
+                <span><i class="fa-solid fa-eye mr-1"></i> Reading Live Portal Data</span>
+                <span id="ai-current-page-badge" class="bg-white px-2 py-0.5 rounded text-[10px] font-bold text-nsakcet-red">Student View</span>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-3 text-xs">
+                <div class="flex items-start space-x-2">
+                    <div class="w-6 h-6 rounded-full bg-ieee-darkblue text-white flex items-center justify-center text-[10px] flex-shrink-0 mt-1">AI</div>
+                    <div class="bg-gray-100 p-3 rounded-2xl rounded-tl-none text-gray-800 leading-relaxed max-w-[85%]">
+                        Hello! I am your IEEE NSAKCET Assistant connected to Cloud Firestore. You can ask me about upcoming workshops, past recaps, or Chapter Advisors!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preset Quick Prompt Chips -->
+            <div class="p-2 border-t border-gray-100 bg-gray-50 flex items-center gap-1.5 overflow-x-auto text-[10px]">
+                <button onclick="sendPresetQuery('When is the next workshop?')" class="whitespace-nowrap px-2.5 py-1 bg-white border border-gray-200 rounded-full hover:border-ieee-blue text-gray-600 font-medium transition-all">
+                    Next Workshop?
+                </button>
+                <button onclick="sendPresetQuery('Who is the CS Advisor?')" class="whitespace-nowrap px-2.5 py-1 bg-white border border-gray-200 rounded-full hover:border-ieee-blue text-gray-600 font-medium transition-all">
+                    CS Advisor?
+                </button>
+                <button onclick="sendPresetQuery('How to join IEEE NSAKCET?')" class="whitespace-nowrap px-2.5 py-1 bg-white border border-gray-200 rounded-full hover:border-ieee-blue text-gray-600 font-medium transition-all">
+                    How to Join?
+                </button>
+            </div>
+
+            <!-- Input Box -->
+            <form onsubmit="handleChatSubmit(event)" class="p-3 border-t border-gray-200 bg-white flex items-center space-x-2">
+                <input type="text" id="chat-input" placeholder="Ask about IEEE NSAKCET events..." class="flex-grow text-xs px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ieee-blue outline-none">
+                <button type="submit" class="w-9 h-9 rounded-xl bg-ieee-darkblue text-white flex items-center justify-center hover:bg-ieee-blue transition-all flex-shrink-0">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- AUTHENTICATION MODAL (LOGIN EMAIL + PASSWORD & ZERO-KNOWLEDGE NOTICE) -->
+    <!-- ========================================================================= -->
+    <div id="modal-login" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 chat-slide-up">
+            
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-ieee-darkblue text-white flex items-center justify-center font-bold text-xs">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-sm">IEEE Portal Authentication</h3>
+                        <p class="text-[10px] text-gray-400">Zero-Knowledge Role-Based Access Control</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-login')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Zero-Knowledge Security Notice Callout -->
+            <div class="bg-blue-50 border border-blue-200/60 rounded-xl p-3 text-[11px] text-blue-900 flex items-start space-x-2">
+                <i class="fa-solid fa-shield-halved text-ieee-blue mt-0.5 text-xs"></i>
+                <div>
+                    <span class="font-bold">Zero-Knowledge Security:</span> Passwords are authenticated and salted via Firebase Auth. Neither Admins nor staff can access credentials in plaintext.
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <form onsubmit="handleEmailPasswordLogin(event)" class="space-y-3">
+                <div id="login-error-alert" class="hidden p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium"></div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Official Email Address</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-regular fa-envelope"></i>
+                        </span>
+                        <input type="email" id="login-email" required placeholder="advisor@nsakcet.ac.in" class="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-key"></i>
+                        </span>
+                        <input type="password" id="login-password" required placeholder="••••••••••••" class="w-full text-xs pl-9 pr-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-login-submit" class="w-full py-2.5 bg-ieee-darkblue hover:bg-ieee-blue text-white rounded-xl text-xs font-bold shadow transition-all flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+                    <span>Log In to Portal</span>
+                </button>
+            </form>
+
+            <!-- Quick Demo Accounts Switcher -->
+            <div class="pt-3 border-t border-gray-100">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Instant Demo Sign-In (One-Click):</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                    <button type="button" onclick="quickFillAndLogin('asif.cs@nsakcet.ac.in', 'faculty123')" class="text-left p-2 rounded-lg bg-gray-50 hover:bg-ieee-light border border-gray-200 hover:border-ieee-blue transition-all">
+                        <p class="font-bold text-gray-800">👨‍🏫 Dr. M. Asif</p>
+                        <p class="text-[10px] text-gray-500">Faculty Advisor (CS)</p>
+                    </button>
+                    <button type="button" onclick="quickFillAndLogin('ahmed.ras@nsakcet.ac.in', 'faculty123')" class="text-left p-2 rounded-lg bg-gray-50 hover:bg-ieee-light border border-gray-200 hover:border-ieee-blue transition-all">
+                        <p class="font-bold text-gray-800">🤖 Prof. K. Ahmed</p>
+                        <p class="text-[10px] text-gray-500">Faculty Advisor (RAS)</p>
+                    </button>
+                    <button type="button" onclick="quickFillAndLogin('fatima.wie@nsakcet.ac.in', 'faculty123')" class="text-left p-2 rounded-lg bg-gray-50 hover:bg-ieee-light border border-gray-200 hover:border-ieee-blue transition-all">
+                        <p class="font-bold text-gray-800">👩‍💼 Dr. Fatima Z.</p>
+                        <p class="text-[10px] text-gray-500">Faculty Advisor (WIE)</p>
+                    </button>
+                    <button type="button" onclick="quickFillAndLogin('head.sb@nsakcet.ac.in', 'admin123')" class="text-left p-2 rounded-lg bg-gray-50 hover:bg-nsakcet-lightred border border-gray-200 hover:border-nsakcet-red transition-all">
+                        <p class="font-bold text-gray-800">🛡️ Dr. SB Head</p>
+                        <p class="text-[10px] text-gray-500">IEEE SB Administrator</p>
+                    </button>
+                    <button type="button" onclick="quickFillAndLogin('student@nsakcet.ac.in', 'student123')" class="text-left p-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 col-span-1 sm:col-span-2 transition-all">
+                        <p class="font-bold text-gray-800">🎓 Syed Aiman</p>
+                        <p class="text-[10px] text-gray-500">Student Portal Member (Public Mode)</p>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: PROVISION NEW CHAPTER ACCOUNT (ADMIN ONLY) -->
+    <!-- ========================================================================= -->
+    <div id="modal-create-account" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 chat-slide-up">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-sm">Provision Chapter Advisor Account</h3>
+                    <p class="text-[10px] text-gray-400">Zero-Knowledge: Sets up metadata in Firestore and identity in Auth</p>
+                </div>
+                <button onclick="closeModal('modal-create-account')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form onsubmit="handleAdminCreateAccount(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Advisor Full Name</label>
+                    <input type="text" id="new-user-name" required placeholder="e.g. Dr. Arshad Ali" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Official Institutional Email</label>
+                    <input type="email" id="new-user-email" required placeholder="advisor.cs@nsakcet.ac.in" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Assigned Society</label>
+                        <select id="new-user-society" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                            <option value="Computer Society">Computer Society (CS)</option>
+                            <option value="RAS">Robotics & Automation (RAS)</option>
+                            <option value="WIE">Women in Engineering (WIE)</option>
+                            <option value="SB">Main Student Branch Core</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Role</label>
+                        <select id="new-user-role" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                            <option value="faculty">Faculty Advisor</option>
+                            <option value="admin">System Admin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex space-x-3">
+                    <button type="button" onclick="closeModal('modal-create-account')" class="w-1/2 py-2.5 border border-gray-300 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-ieee-darkblue hover:bg-ieee-blue text-white rounded-xl text-xs font-bold shadow">Provision Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: FACULTY CALENDAR EVENT REQUEST -->
+    <!-- ========================================================================= -->
+    <div id="modal-event-request" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 chat-slide-up">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-base">Request Event Date Allocation</h3>
+                    <p class="text-[10px] text-gray-400">Pushes pending record into Cloud Firestore <code class="text-ieee-blue">/calendarRequests</code></p>
+                </div>
+                <button onclick="closeModal('modal-event-request')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form onsubmit="submitFacultyRequest(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Target Date</label>
+                    <input type="text" id="request-date-display" readonly class="w-full text-xs p-2.5 bg-gray-100 rounded-xl border border-gray-300 font-bold text-ieee-darkblue">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Event Title</label>
+                    <input type="text" id="req-title" required placeholder="e.g. AI & IoT Innovations Workshop" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Society / Chapter (RBAC Locked)</label>
+                        <input type="text" id="req-society" readonly class="w-full text-xs p-2.5 bg-gray-100 rounded-xl border border-gray-300 font-bold text-ieee-darkblue cursor-not-allowed">
+                        <p class="text-[9px] text-gray-400 mt-0.5">🔒 Scoped to your assigned faculty chapter</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Expected Attendees</label>
+                        <input type="number" id="req-attendees" required placeholder="120" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Venue Preference</label>
+                    <input type="text" id="req-venue" required placeholder="e.g. Main Auditorium / Lab 3" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Brief Description / Objective</label>
+                    <textarea id="req-desc" rows="2" required placeholder="Outline event objectives and required hardware..." class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex space-x-3">
+                    <button type="button" onclick="closeModal('modal-event-request')" class="w-1/2 py-2.5 border border-gray-300 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-ieee-darkblue hover:bg-ieee-blue text-white rounded-xl text-xs font-bold shadow">Submit to Admin Queue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: STUDENT EVENT REGISTRATION -->
+    <!-- ========================================================================= -->
+    <div id="modal-register" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 chat-slide-up">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 class="font-bold text-gray-800 text-base">Event Registration</h3>
+                <button onclick="closeModal('modal-register')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <p class="text-xs text-gray-500">Registering for: <span id="register-event-title" class="font-bold text-ieee-darkblue">Event</span></p>
+
+            <form onsubmit="handleStudentRegistration(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Full Name</label>
+                    <input type="text" id="reg-student-name" required placeholder="Student Name" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">College Roll Number / ID</label>
+                    <input type="text" id="reg-student-roll" required placeholder="1604-22-733-XXX" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">IEEE Member ID (Optional)</label>
+                    <input type="text" id="reg-student-ieee" placeholder="98765432" class="w-full text-xs p-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ieee-blue outline-none">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-nsakcet-red hover:bg-nsakcet-darkred text-white rounded-xl text-xs font-bold shadow">
+                    Confirm Seat Reservation
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: PHOTO GALLERY ALBUM -->
+    <!-- ========================================================================= -->
+    <div id="modal-gallery" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 chat-slide-up max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                    <h3 id="gallery-title" class="font-bold text-gray-800 text-base">Past Event Photo Album</h3>
+                    <p class="text-[11px] text-gray-500">IEEE NSAKCET Official Media Archives</p>
+                </div>
+                <button onclick="closeModal('modal-gallery')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div id="gallery-images-container" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: FIREBASE CONFIGURATION INSPECTION -->
+    <!-- ========================================================================= -->
+    <div id="modal-config" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 chat-slide-up">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-base">Firebase Project Credentials</h3>
+                    <p class="text-[10px] text-gray-400">Enforcing Cloud Firestore & Identity Platform</p>
+                </div>
+                <button onclick="closeModal('modal-config')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <p class="text-gray-600 leading-relaxed">
+                    This portal communicates with Firebase via modern modular drivers. The active engine executes strict server-grade RBAC rules locally and can link to any Google Firebase project instantly.
+                </p>
+
+                <div class="bg-gray-900 text-gray-100 p-4 rounded-xl font-mono text-[11px] overflow-x-auto">
+                    <code>
+// firestore.rules active matrix:<br>
+/events/{id}          - Public read; Faculty/Admin write (Society scoped)<br>
+/calendarRequests/{id} - Admin & owning Faculty read; Faculty create; Admin update/delete<br>
+/users/{id}            - Authenticated read; Admin write (Zero-knowledge passwords)
+                    </code>
+                </div>
+
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px]">
+                    <strong>Note:</strong> To connect your official live Google Firebase project, provide your credentials in <code class="font-bold">firebase-config.js</code> and run <code class="font-bold">firebase deploy --only firestore:rules</code>.
+                </div>
+            </div>
+
+            <button onclick="closeModal('modal-config')" class="w-full py-2.5 bg-ieee-darkblue text-white rounded-xl text-xs font-bold shadow">
+                Close Window
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- JAVASCRIPT APPLICATION CORE (FIREBASE & RBAC INTEGRATION) -->
+    <!-- ========================================================================= -->
+    <script type="module">
+        import { dbService, firebaseConfig } from './firebase-config.js';
+
+        // Application State
+        window.currentPortal = 'student';
+        window.currentUser = null;
+        window.allEvents = [];
+        window.allCalendarRequests = [];
+        window.allUsers = [];
+        window.selectedCalendarDate = '';
+
+        // Expose dbService to window for event handlers
+        window.dbService = dbService;
+
+        // =========================================================================
+        // 1. APPLICATION INITIALIZATION & REAL-TIME LISTENERS
+        // =========================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            initAuthListener();
+            initFirestoreListeners();
+        });
+
+        function initAuthListener() {
+            dbService.onAuthStateChanged((user) => {
+                window.currentUser = user;
+                updateAuthUI(user);
+                enforceRBACNavPermissions(user);
+            });
+        }
+
+        function initFirestoreListeners() {
+            // Real-time listener on /events
+            dbService.onEventsSnapshot((events) => {
+                window.allEvents = events;
+                renderUpcomingEventsHub(events);
+                renderPastEventsHub(events);
+                renderAdminApprovedList(events);
+                renderFacultyCalendarGrid();
+                updateStatsBar(events);
+            });
+
+            // Real-time listener on /calendarRequests
+            dbService.onCalendarRequestsSnapshot((requests) => {
+                window.allCalendarRequests = requests;
+                renderAdminApprovalTable(requests);
+                renderFacultyCalendarGrid();
+                updatePendingBadges(requests);
+            });
+
+            // Real-time listener on /users (Zero-Knowledge)
+            dbService.onUsersSnapshot((users) => {
+                window.allUsers = users;
+                renderAdminUsersDirectory(users);
+            });
+        }
+
+        // =========================================================================
+        // 2. AUTHENTICATION & ZERO-KNOWLEDGE STATE UI
+        // =========================================================================
+        function updateAuthUI(user) {
+            const unauthDiv = document.getElementById('auth-unauthenticated');
+            const authDiv = document.getElementById('auth-authenticated');
+            const nameEl = document.getElementById('user-display-name');
+            const roleEl = document.getElementById('user-role-badge');
+            const avatarEl = document.getElementById('user-avatar-circle');
+            const reqSocietyInput = document.getElementById('req-society');
+            const pubSocietyInput = document.getElementById('pub-event-society');
+            const facultyWelcome = document.getElementById('faculty-welcome-title');
+            const facultySocietyBadge = document.getElementById('faculty-assigned-society-badge');
+
+            if (user) {
+                unauthDiv.classList.add('hidden');
+                authDiv.classList.remove('hidden');
+                authDiv.classList.add('flex');
+
+                nameEl.textContent = user.displayName;
+                
+                if (user.role === 'admin') {
+                    roleEl.textContent = 'System Admin (IEEE SB)';
+                    roleEl.className = 'text-[10px] font-bold text-nsakcet-red uppercase tracking-wider';
+                    avatarEl.innerHTML = '<i class="fa-solid fa-user-shield text-nsakcet-red"></i>';
+                } else if (user.role === 'faculty') {
+                    roleEl.textContent = `Faculty Advisor: ${user.society}`;
+                    roleEl.className = 'text-[10px] font-bold text-ieee-blue uppercase tracking-wider';
+                    avatarEl.innerHTML = '<i class="fa-solid fa-chalkboard-user text-ieee-blue"></i>';
+                    
+                    if (reqSocietyInput) reqSocietyInput.value = user.society;
+                    if (pubSocietyInput) pubSocietyInput.value = user.society;
+                    if (facultyWelcome) facultyWelcome.textContent = `Welcome, ${user.displayName} (${user.society} Advisor)`;
+                    if (facultySocietyBadge) facultySocietyBadge.textContent = `${user.society} Chapter`;
+                } else {
+                    roleEl.textContent = 'Student Member';
+                    roleEl.className = 'text-[10px] font-bold text-gray-500 uppercase tracking-wider';
+                    avatarEl.innerHTML = '<i class="fa-solid fa-graduation-cap text-gray-600"></i>';
+                }
+            } else {
+                unauthDiv.classList.remove('hidden');
+                authDiv.classList.add('hidden');
+                authDiv.classList.remove('flex');
+            }
+        }
+
+        // =========================================================================
+        // 3. RBAC PORTAL NAVIGATION ENFORCEMENT
+        // =========================================================================
+        function enforceRBACNavPermissions(user) {
+            const btnStudent = document.getElementById('nav-btn-student');
+            const btnFaculty = document.getElementById('nav-btn-faculty');
+            const btnAdmin = document.getElementById('nav-btn-admin');
+
+            const role = user ? user.role : 'student';
+
+            // Student portal always accessible
+            btnStudent.classList.remove('hidden');
+
+            if (role === 'admin') {
+                // Admin: Student Portal & Admin Portal visible; Faculty portal hidden
+                btnFaculty.classList.add('hidden');
+                btnAdmin.classList.remove('hidden');
+            } else if (role === 'faculty') {
+                // Faculty: Student Portal & Faculty Portal visible; Admin portal hidden
+                btnFaculty.classList.remove('hidden');
+                btnAdmin.classList.add('hidden');
+            } else {
+                // Student / Public: Only Student Portal visible
+                btnFaculty.classList.add('hidden');
+                btnAdmin.classList.add('hidden');
+                if (window.currentPortal !== 'student') {
+                    switchPortal('student');
+                }
+            }
+
+            // Guard against unauthorized active portal
+            if (window.currentPortal === 'admin' && role !== 'admin') {
+                switchPortal('student');
+            } else if (window.currentPortal === 'faculty' && role !== 'faculty') {
+                switchPortal('student');
+            }
+        }
+
+        // Global Portal Switcher with RBAC Guard
+        window.switchPortal = function(portalName) {
+            const user = window.currentUser;
+            const role = user ? user.role : 'student';
+
+            // Enforce RBAC guard
+            if (portalName === 'admin' && role !== 'admin') {
+                showToast("Access Denied: Admin authorization required.", "error");
+                return;
+            }
+            if (portalName === 'faculty' && role !== 'faculty') {
+                showToast("Access Denied: Faculty Advisor authorization required.", "error");
+                return;
+            }
+
+            window.currentPortal = portalName;
+
+            // Hide all sections
+            document.querySelectorAll('.portal-section').forEach(sec => sec.classList.add('hidden'));
+
+            // Remove active style from nav buttons
+            document.querySelectorAll('.portal-nav-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-ieee-darkblue', 'shadow-sm');
+                btn.classList.add('text-gray-600');
+            });
+
+            // Show selected section
+            const targetSec = document.getElementById(`portal-${portalName}`);
+            if (targetSec) targetSec.classList.remove('hidden');
+
+            // Style active nav button
+            const activeBtn = document.getElementById(`nav-btn-${portalName}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-white', 'text-ieee-darkblue', 'shadow-sm');
+                activeBtn.classList.remove('text-gray-600');
+            }
+
+            // Update chatbot context pill
+            const pageBadge = document.getElementById('ai-current-page-badge');
+            if (pageBadge) {
+                if (portalName === 'student') pageBadge.textContent = 'Student View';
+                else if (portalName === 'faculty') pageBadge.textContent = 'Faculty Portal View';
+                else if (portalName === 'admin') pageBadge.textContent = 'Admin View';
+            }
+        };
+
+        // =========================================================================
+        // 4. STUDENT PORTAL REAL-TIME RENDERING
+        // =========================================================================
+        function renderUpcomingEventsHub(events) {
+            const container = document.getElementById('events-upcoming-container');
+            const countBadge = document.getElementById('tab-upcoming-count');
+            if (!container) return;
+
+            const upcoming = events.filter(e => e.status === 'upcoming');
+            if (countBadge) countBadge.textContent = upcoming.length;
+
+            if (upcoming.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-12 text-center bg-white rounded-2xl border border-gray-100">
+                        <i class="fa-regular fa-calendar-xmark text-4xl text-gray-300 mb-2"></i>
+                        <p class="text-sm font-bold text-gray-600">No upcoming events scheduled right now.</p>
+                        <p class="text-xs text-gray-400">Check back soon or explore past event recaps.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = upcoming.map(evt => `
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-all group">
+                    <div class="relative h-44 bg-gray-200 overflow-hidden">
+                        <img src="${evt.bannerUrl || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=600&q=80'}" alt="${evt.title}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-300">
+                        <span class="absolute top-3 left-3 bg-ieee-darkblue text-white text-xs font-bold px-2.5 py-1 rounded-md shadow">${evt.society}</span>
+                        <span class="absolute top-3 right-3 bg-white/90 backdrop-blur-md text-nsakcet-red text-xs font-extrabold px-2 py-1 rounded-md">Scheduled</span>
+                    </div>
+                    <div class="p-5 flex-grow flex flex-col justify-between space-y-4">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-base leading-snug">${evt.title}</h3>
+                            <p class="text-xs text-gray-500 mt-2 line-clamp-2">${evt.description}</p>
+                        </div>
+                        <div class="space-y-2 border-t border-gray-100 pt-3 text-xs text-gray-600">
+                            <div class="flex items-center justify-between">
+                                <span><i class="fa-regular fa-calendar text-ieee-blue mr-1"></i> ${evt.dateFormatted || evt.eventDate}</span>
+                                <span><i class="fa-regular fa-clock text-ieee-blue mr-1"></i> ${evt.timeFormatted || '10:00 AM'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span><i class="fa-solid fa-location-dot text-nsakcet-red mr-1"></i> ${evt.venue || 'Campus Hall'}</span>
+                                <span class="font-bold text-green-600">Open to All</span>
+                            </div>
+                        </div>
+                        <button onclick="openRegisterModal('${evt.title.replace(/'/g, "\\'")}')" class="w-full py-2 bg-ieee-blue hover:bg-ieee-darkblue text-white font-semibold text-xs rounded-xl transition-all shadow-sm">
+                            Register / Reserve Seat
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderPastEventsHub(events) {
+            const container = document.getElementById('events-past-container');
+            const countBadge = document.getElementById('tab-past-count');
+            if (!container) return;
+
+            const past = events.filter(e => e.status === 'past');
+            if (countBadge) countBadge.textContent = past.length;
+
+            if (past.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-12 text-center bg-white rounded-2xl border border-gray-100">
+                        <i class="fa-regular fa-images text-4xl text-gray-300 mb-2"></i>
+                        <p class="text-sm font-bold text-gray-600">No past photo recaps uploaded yet.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = past.map(evt => `
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group">
+                    <div class="relative h-48 overflow-hidden">
+                        <img src="${evt.bannerUrl}" alt="${evt.title}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-300">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent flex items-end p-4">
+                            <div>
+                                <span class="text-[10px] uppercase tracking-wider bg-nsakcet-red text-white px-2 py-0.5 rounded font-bold">${evt.society}</span>
+                                <h4 class="text-white font-bold text-sm mt-1">${evt.title}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 flex items-center justify-between bg-gray-50">
+                        <span class="text-xs text-gray-500"><i class="fa-regular fa-images mr-1"></i> ${evt.galleryPhotos ? evt.galleryPhotos.length : 3} Gallery Photos</span>
+                        <button onclick="openGalleryModal('${evt.title.replace(/'/g, "\\'")}')" class="text-xs text-ieee-blue font-bold hover:underline">
+                            View Recap & Photos &rarr;
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStatsBar(events) {
+            const statEventsEl = document.getElementById('stat-events-count');
+            if (statEventsEl) {
+                statEventsEl.textContent = `${events.length + 42}+`;
+            }
+        }
+
+        window.switchEventTab = function(tab) {
+            const upcomingBtn = document.getElementById('tab-btn-upcoming');
+            const pastBtn = document.getElementById('tab-btn-past');
+            const upcomingContainer = document.getElementById('events-upcoming-container');
+            const pastContainer = document.getElementById('events-past-container');
+
+            if (tab === 'upcoming') {
+                upcomingBtn.classList.add('bg-white', 'text-ieee-darkblue', 'shadow-sm');
+                upcomingBtn.classList.remove('text-gray-600');
+                pastBtn.classList.remove('bg-white', 'text-ieee-darkblue', 'shadow-sm');
+                pastBtn.classList.add('text-gray-600');
+
+                upcomingContainer.classList.remove('hidden');
+                pastContainer.classList.add('hidden');
+            } else {
+                pastBtn.classList.add('bg-white', 'text-ieee-darkblue', 'shadow-sm');
+                pastBtn.classList.remove('text-gray-600');
+                upcomingBtn.classList.remove('bg-white', 'text-ieee-darkblue', 'shadow-sm');
+                upcomingBtn.classList.add('text-gray-600');
+
+                pastContainer.classList.remove('hidden');
+                upcomingContainer.classList.add('hidden');
+            }
+        };
+
+        // =========================================================================
+        // 5. FACULTY PORTAL & CALENDAR GRID ENGINE
+        // =========================================================================
+        function renderFacultyCalendarGrid() {
+            const grid = document.getElementById('calendar-grid-faculty');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const user = window.currentUser;
+            const currentFacultySociety = user && user.role === 'faculty' ? user.society : null;
+
+            // Generate 31 October days
+            for (let day = 1; day <= 31; day++) {
+                const dayStr = day < 10 ? '0' + day : day.toString();
+                const formattedDate = `October ${dayStr}, 2026`;
+
+                const cell = document.createElement('div');
+                cell.className = 'h-16 border border-gray-100 rounded-xl p-1 flex flex-col justify-between cursor-pointer hover:border-ieee-blue transition-all bg-white relative';
+
+                // Look for approved events on this date
+                const isApproved = window.allEvents.some(e => 
+                    (e.dateFormatted && e.dateFormatted.includes(`October ${dayStr}`)) ||
+                    (e.eventDate && e.eventDate.includes(`2026-10-${dayStr}`))
+                );
+
+                // Look for pending requests on this date
+                const isPending = window.allCalendarRequests.some(r => 
+                    r.status === 'pending' && r.requestedDate && r.requestedDate.includes(`October ${dayStr}`)
+                );
+
+                let badgeHTML = '';
+                if (isApproved) {
+                    badgeHTML = `<span class="bg-green-100 text-green-700 font-bold text-[9px] px-1 py-0.5 rounded truncate">Approved</span>`;
+                    cell.classList.add('bg-green-50/40');
+                } else if (isPending) {
+                    badgeHTML = `<span class="bg-amber-100 text-amber-700 font-bold text-[9px] px-1 py-0.5 rounded truncate">Pending</span>`;
+                    cell.classList.add('bg-amber-50/40');
+                } else {
+                    badgeHTML = `<span class="text-[9px] text-gray-300 font-normal">Available</span>`;
+                }
+
+                cell.innerHTML = `
+                    <span class="font-bold text-xs text-gray-700">${day}</span>
+                    ${badgeHTML}
+                `;
+
+                cell.onclick = () => openEventRequestModal(formattedDate);
+                grid.appendChild(cell);
+            }
+
+            // Update faculty metrics
+            if (user && user.role === 'faculty') {
+                const chapterApproved = window.allEvents.filter(e => e.society === user.society).length;
+                const chapterPending = window.allCalendarRequests.filter(r => r.society === user.society && r.status === 'pending').length;
+
+                const facApprovedEl = document.getElementById('faculty-approved-count');
+                const facPendingEl = document.getElementById('faculty-pending-count');
+                if (facApprovedEl) facApprovedEl.textContent = chapterApproved;
+                if (facPendingEl) facPendingEl.textContent = chapterPending;
+            }
+        }
+
+        window.submitFacultyRequest = async function(event) {
+            event.preventDefault();
+            const user = window.currentUser;
+
+            if (!user || user.role !== 'faculty') {
+                showToast("Permission Denied: Must be logged in as Faculty Advisor.", "error");
+                return;
+            }
+
+            const title = document.getElementById('req-title').value;
+            const attendees = document.getElementById('req-attendees').value;
+            const venue = document.getElementById('req-venue').value;
+            const desc = document.getElementById('req-desc').value;
+
+            try {
+                // Live push into Firestore /calendarRequests collection
+                await dbService.addCalendarRequest({
+                    title: title,
+                    requestedDate: window.selectedCalendarDate,
+                    society: user.society, // RBAC enforcement: locked to user.society
+                    expectedAttendees: attendees,
+                    venueRequirements: venue,
+                    description: desc
+                });
+
+                closeModal('modal-event-request');
+                document.getElementById('req-title').value = '';
+                document.getElementById('req-attendees').value = '';
+                document.getElementById('req-venue').value = '';
+                document.getElementById('req-desc').value = '';
+
+                showToast("Request submitted live to Admin Approval Queue!", "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
+
+        window.handleFacultyEventPublish = async function(event) {
+            event.preventDefault();
+            const user = window.currentUser;
+
+            if (!user || (user.role !== 'faculty' && user.role !== 'admin')) {
+                showToast("Permission Denied: Only Chapter Advisors or Admin can publish events.", "error");
+                return;
+            }
+
+            const title = document.getElementById('pub-event-title').value;
+            const status = document.getElementById('pub-event-status').value;
+            const dateStr = document.getElementById('pub-event-date').value;
+            const venue = document.getElementById('pub-event-venue').value;
+            const desc = document.getElementById('pub-event-desc').value;
+            const banner = document.getElementById('pub-event-banner').value;
+
+            try {
+                // Live push directly into Firestore /events collection
+                await dbService.addEvent({
+                    title: title,
+                    society: user.role === 'admin' ? 'Computer Society' : user.society,
+                    status: status,
+                    eventDate: dateStr,
+                    dateFormatted: dateStr,
+                    venue: venue,
+                    description: desc,
+                    bannerUrl: banner || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=600&q=80'
+                });
+
+                document.getElementById('pub-event-title').value = '';
+                document.getElementById('pub-event-desc').value = '';
+                document.getElementById('pub-event-banner').value = '';
+
+                showToast("Verified event published live to Student Hub!", "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
+
+        // =========================================================================
+        // 6. ADMIN PORTAL (APPROVAL QUEUE & ZERO-KNOWLEDGE DIRECTORY)
+        // =========================================================================
+        function renderAdminApprovalTable(requests) {
+            const tbody = document.getElementById('admin-approval-table-body');
+            const countTag = document.getElementById('admin-pending-count-tag');
+            if (!tbody) return;
+
+            const pending = requests.filter(r => r.status === 'pending');
+            if (countTag) countTag.textContent = `${pending.length} Pending Review`;
+
+            if (pending.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-400">All faculty requests have been processed. Queue is clear!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = pending.map(req => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="py-3 px-4 font-bold text-gray-800">${req.title}</td>
+                    <td class="py-3 px-4 text-gray-600 font-semibold">${req.society}</td>
+                    <td class="py-3 px-4 font-semibold text-ieee-blue">${req.requestedDate}</td>
+                    <td class="py-3 px-4 text-gray-600">${req.venueRequirements}</td>
+                    <td class="py-3 px-4 text-gray-700 font-medium">${req.facultyName || 'Advisor'}</td>
+                    <td class="py-3 px-4 text-gray-600">${req.expectedAttendees} Students</td>
+                    <td class="py-3 px-4 text-center space-x-2">
+                        <button onclick="adminApprove('${req.id}')" class="bg-green-600 hover:bg-green-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all">
+                            Approve
+                        </button>
+                        <button onclick="adminReject('${req.id}')" class="bg-nsakcet-red hover:bg-nsakcet-darkred text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all">
+                            Reject
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.adminApprove = async function(requestId) {
+            try {
+                await dbService.updateCalendarRequestStatus(requestId, 'approved');
+                showToast("Request approved! Added to Master Calendar and published to Student Hub.", "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
+
+        window.adminReject = async function(requestId) {
+            try {
+                await dbService.updateCalendarRequestStatus(requestId, 'rejected');
+                showToast("Request rejected and archived.", "info");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
+
+        function renderAdminApprovedList(events) {
+            const list = document.getElementById('admin-approved-list');
+            if (!list) return;
+
+            const upcoming = events.filter(e => e.status === 'upcoming');
+            if (upcoming.length === 0) {
+                list.innerHTML = `<p class="text-xs text-gray-400 py-4 text-center">No approved events in schedule.</p>`;
+                return;
+            }
+
+            list.innerHTML = upcoming.map(evt => `
+                <div class="p-3 border border-gray-100 rounded-xl bg-green-50/50 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-xs">${evt.title}</h4>
+                            <p class="text-[11px] text-gray-500">${evt.society} • Allocated Date: <span class="font-bold text-ieee-darkblue">${evt.dateFormatted || evt.eventDate}</span></p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] bg-green-200 text-green-800 font-bold px-2 py-0.5 rounded">Approved & Published</span>
+                </div>
+            `).join('');
+        }
+
+        function updatePendingBadges(requests) {
+            const badge = document.getElementById('admin-pending-badge');
+            const pending = requests.filter(r => r.status === 'pending');
+            if (!badge) return;
+
+            if (pending.length > 0) {
+                badge.textContent = pending.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // Zero-Knowledge Accounts Directory
+        function renderAdminUsersDirectory(users) {
+            const tbody = document.getElementById('admin-users-table-body');
+            const totalEl = document.getElementById('accounts-stat-total');
+            const facEl = document.getElementById('accounts-stat-faculty');
+            const socEl = document.getElementById('accounts-stat-societies');
+
+            if (totalEl) totalEl.textContent = users.length;
+            if (facEl) facEl.textContent = users.filter(u => u.role === 'faculty').length;
+            if (socEl) socEl.textContent = new Set(users.filter(u => u.society).map(u => u.society)).size;
+
+            if (!tbody) return;
+
+            tbody.innerHTML = users.map(u => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="py-2.5 px-4 font-mono text-[10px] text-gray-400">${u.uid}</td>
+                    <td class="py-2.5 px-4 font-bold text-gray-800">${u.displayName}</td>
+                    <td class="py-2.5 px-4 text-gray-600">${u.email}</td>
+                    <td class="py-2.5 px-4">
+                        ${u.society ? `<span class="bg-blue-50 text-ieee-blue font-bold px-2 py-0.5 rounded text-[10px]">${u.society}</span>` : '<span class="text-gray-400">—</span>'}
+                    </td>
+                    <td class="py-2.5 px-4">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                            u.role === 'admin' ? 'bg-red-100 text-nsakcet-red' : 
+                            u.role === 'faculty' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+                        }">
+                            ${u.role}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-4 text-gray-500 text-[11px]">${new Date(u.createdAt).toLocaleDateString()}</td>
+                    <td class="py-2.5 px-4">
+                        <span class="inline-flex items-center text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            <i class="fa-solid fa-lock text-[8px] mr-1"></i> Zero-Knowledge (Auth Hash)
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.handleAdminCreateAccount = async function(event) {
+            event.preventDefault();
+            const name = document.getElementById('new-user-name').value;
+            const email = document.getElementById('new-user-email').value;
+            const society = document.getElementById('new-user-society').value;
+            const role = document.getElementById('new-user-role').value;
+
+            try {
+                await dbService.createSocietyAccount({
+                    displayName: name,
+                    email: email,
+                    society: society,
+                    role: role
+                });
+                closeModal('modal-create-account');
+                document.getElementById('new-user-name').value = '';
+                document.getElementById('new-user-email').value = '';
+                showToast(`Provisioned account for ${name} (${society})!`, "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
+
+        // =========================================================================
+        // 7. AUTH MODAL & QUICK-SWITCH DEMO HANDLERS
+        // =========================================================================
+        window.openLoginModal = function() {
+            const errAlert = document.getElementById('login-error-alert');
+            if (errAlert) errAlert.classList.add('hidden');
+            document.getElementById('modal-login').classList.remove('hidden');
+        };
+
+        window.quickFillAndLogin = async function(email, password) {
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = password;
+            await executeLogin(email, password);
+        };
+
+        window.handleEmailPasswordLogin = async function(event) {
+            event.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            await executeLogin(email, password);
+        };
+
+        async function executeLogin(email, password) {
+            const errAlert = document.getElementById('login-error-alert');
+            const submitBtn = document.getElementById('btn-login-submit');
+
+            try {
+                if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Authenticating...';
+                
+                // Authenticate with Firebase Auth / reactive engine
+                const { user } = await dbService.signInWithEmailAndPassword(email, password);
+                
+                closeModal('modal-login');
+                showToast(`Welcome back, ${user.displayName}!`, "success");
+
+                // Auto-route based on role
+                if (user.role === 'admin') {
+                    switchPortal('admin');
+                } else if (user.role === 'faculty') {
+                    switchPortal('faculty');
+                } else {
+                    switchPortal('student');
+                }
+            } catch (err) {
+                if (errAlert) {
+                    errAlert.textContent = err.message;
+                    errAlert.classList.remove('hidden');
+                }
+            } finally {
+                if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket text-xs mr-1"></i> Log In to Portal';
+            }
+        }
+
+        window.handleSignOut = async function() {
+            await dbService.signOut();
+            switchPortal('student');
+            showToast("Successfully signed out. Viewing Public Student Portal.", "info");
+        };
+
+        // =========================================================================
+        // 8. MODAL HANDLERS & REGISTRATION
+        // =========================================================================
+        window.openEventRequestModal = function(dateStr) {
+            const user = window.currentUser;
+            if (!user || user.role !== 'faculty') {
+                showToast("Please log in as a Faculty Advisor to request event calendar slots.", "info");
+                openLoginModal();
+                return;
+            }
+
+            window.selectedCalendarDate = dateStr;
+            document.getElementById('request-date-display').value = dateStr;
+            document.getElementById('req-society').value = user.society;
+            document.getElementById('modal-event-request').classList.remove('hidden');
+        };
+
+        window.openRegisterModal = function(eventTitle) {
+            document.getElementById('register-event-title').textContent = eventTitle;
+            document.getElementById('modal-register').classList.remove('hidden');
+        };
+
+        window.handleStudentRegistration = function(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-student-name').value;
+            closeModal('modal-register');
+            showToast(`Registration confirmed for ${name}! Check email for hall pass.`, "success");
+        };
+
+        window.openGalleryModal = function(albumName) {
+            document.getElementById('gallery-title').textContent = albumName;
+            const container = document.getElementById('gallery-images-container');
+            
+            const matched = window.allEvents.find(e => e.title === albumName);
+            const photos = (matched && matched.galleryPhotos && matched.galleryPhotos.length > 0) ? 
+                matched.galleryPhotos : [
+                    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=400&q=80",
+                    "https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&w=400&q=80",
+                    "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=400&q=80",
+                    "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=400&q=80",
+                    "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=400&q=80",
+                    "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=400&q=80"
+                ];
+
+            container.innerHTML = photos.map(src => `
+                <img src="${src}" class="rounded-xl h-36 w-full object-cover shadow-sm hover:scale-105 transition-all cursor-pointer">
+            `).join('');
+
+            document.getElementById('modal-gallery').classList.remove('hidden');
+        };
+
+        window.openCreateAccountModal = function() {
+            document.getElementById('modal-create-account').classList.remove('hidden');
+        };
+
+        window.openConfigModal = function() {
+            document.getElementById('modal-config').classList.remove('hidden');
+        };
+
+        window.closeModal = function(modalId) {
+            const m = document.getElementById(modalId);
+            if (m) m.classList.add('hidden');
+        };
+
+        window.scrollToCalendarRequest = function() {
+            const el = document.getElementById('faculty-calendar-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.resetDemoDatabase = function() {
+            if (confirm("Reset all collections (users, events, requests) to default demonstration state?")) {
+                dbService.resetToInitialSeed();
+                showToast("Firestore database reset to initial demonstration state.", "info");
+            }
+        };
+
+        // =========================================================================
+        // 9. TOAST NOTIFICATION UTILITY
+        // =========================================================================
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-nsakcet-red' : 'bg-ieee-darkblue';
+            const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info';
+
+            toast.className = `${bgColor} text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2.5 toast-slide-down pointer-events-auto max-w-sm`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icon} text-sm"></i>
+                <span class="flex-grow font-medium leading-tight">${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-white/70 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // =========================================================================
+        // 10. AI ASSISTANT CONNECTED TO LIVE FIRESTORE DATA
+        // =========================================================================
+        window.toggleChatbot = function() {
+            const chatWin = document.getElementById('chat-window');
+            chatWin.classList.toggle('hidden');
+        };
+
+        window.sendPresetQuery = function(queryText) {
+            document.getElementById('chat-input').value = queryText;
+            window.handleChatSubmit(new Event('submit'));
+        };
+
+        window.handleChatSubmit = function(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const query = input.value.trim();
+            if (!query) return;
+
+            appendChatMessage('user', query);
+            input.value = '';
+
+            setTimeout(() => {
+                let reply = getContextualBotResponse(query);
+                appendChatMessage('bot', reply);
+            }, 500);
+        };
+
+        function appendChatMessage(sender, text) {
+            const msgContainer = document.getElementById('chat-messages');
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex items-start space-x-2 ${sender === 'user' ? 'justify-end' : ''}`;
+
+            if (sender === 'user') {
+                wrapper.innerHTML = `
+                    <div class="bg-ieee-darkblue text-white p-3 rounded-2xl rounded-tr-none text-xs leading-relaxed max-w-[85%]">
+                        ${text}
+                    </div>
+                `;
+            } else {
+                wrapper.innerHTML = `
+                    <div class="w-6 h-6 rounded-full bg-ieee-darkblue text-white flex items-center justify-center text-[10px] flex-shrink-0 mt-1">AI</div>
+                    <div class="bg-gray-100 p-3 rounded-2xl rounded-tl-none text-gray-800 text-xs leading-relaxed max-w-[85%]">
+                        ${text}
+                    </div>
+                `;
+            }
+
+            msgContainer.appendChild(wrapper);
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+
+        function getContextualBotResponse(query) {
+            const q = query.toLowerCase();
+            const upcoming = window.allEvents.filter(e => e.status === 'upcoming');
+
+            if (q.includes('workshop') || q.includes('next') || q.includes('event')) {
+                if (upcoming.length > 0) {
+                    const first = upcoming[0];
+                    return `The next scheduled event in Firestore is <strong>${first.title}</strong> organized by <strong>${first.society}</strong> on <strong>${first.dateFormatted || first.eventDate}</strong> at ${first.venue}! You can reserve your seat directly via the Student Portal.`;
+                }
+                return `Currently there are no upcoming events in the calendar. Keep an eye on our portal for announcements!`;
+            } else if (q.includes('advisor') || q.includes('cs') || q.includes('who')) {
+                const advisors = window.allUsers.filter(u => u.role === 'faculty');
+                if (q.includes('cs')) {
+                    const csAdv = advisors.find(a => a.society === 'Computer Society');
+                    return `The Chapter Advisor for IEEE Computer Society is <strong>${csAdv ? csAdv.displayName : 'Dr. Mohammed Asif'}</strong>.`;
+                } else if (q.includes('ras')) {
+                    const rasAdv = advisors.find(a => a.society === 'RAS');
+                    return `The Chapter Advisor for Robotics & Automation (RAS) is <strong>${rasAdv ? rasAdv.displayName : 'Prof. K. Ahmed'}</strong>.`;
+                } else if (q.includes('wie')) {
+                    const wieAdv = advisors.find(a => a.society === 'WIE');
+                    return `The Faculty Advisor for Women in Engineering (WIE) is <strong>${wieAdv ? wieAdv.displayName : 'Dr. Fatima Z.'}</strong>.`;
+                }
+                return `Our Chapter Faculty Advisors include: <strong>Dr. Mohammed Asif</strong> (CS), <strong>Prof. K. Ahmed</strong> (RAS), and <strong>Dr. Fatima Z.</strong> (WIE). IEEE SB Head is <strong>Dr. SB Head</strong>.`;
+            } else if (q.includes('join') || q.includes('member')) {
+                return `To join IEEE NSAKCET, visit ieee.org to enroll with Student Branch Code <strong>STB95031</strong>, or reach out to your Chapter Faculty Advisor!`;
+            } else if (q.includes('hackathon')) {
+                return `The flagship <strong>IEEE NSAKCET National Hackathon 2026</strong> takes place on Nov 12-13, 2026 at the Main Auditorium!`;
+            } else {
+                return `I am currently analyzing live data from the <strong>${window.currentPortal.toUpperCase()} Portal</strong>. You can ask me about event dates, chapter advisors, or venue allocations!`;
+            }
+        }
+    </script>
+</body>
+</html>
